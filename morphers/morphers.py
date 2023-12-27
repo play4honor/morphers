@@ -82,14 +82,13 @@ class Normalizer(Morpher):
 
     def save_state_dict(self):
         return {
-            "class": "Normalizer",
             "mean": self.mean,
             "std": self.std,
         }
 
     @classmethod
     def from_state_dict(cls, state_dict):
-        return cls(mean=state_dict["mean"], std=state_dict["std"])
+        return cls(**state_dict)
 
     def __repr__(self):
         return f"Normalizer(mean={self.mean}, std={self.std})"
@@ -110,9 +109,8 @@ class Normalizer(Morpher):
 class Integerizer(Morpher):
     MISSING_VALUE = "<MISSING>"
 
-    def __init__(self, vocab, p_mask):
+    def __init__(self, vocab):
         self.vocab = vocab
-        self.p_mask = p_mask
 
     @property
     def required_dtype(self):
@@ -126,17 +124,17 @@ class Integerizer(Morpher):
         return x.map_dict(self.vocab, default=len(self.vocab))
 
     @classmethod
-    def from_data(cls, x, p_mask=None):
+    def from_data(cls, x):
         vocab = {t: i for i, t in enumerate(x.filter(x.is_not_null()).unique())}
 
-        return cls(vocab, p_mask)
+        return cls(vocab)
 
     def save_state_dict(self):
-        return {"vocab": self.vocab, "kwargs": {"p_mask": self.p_mask}}
+        return {"vocab": self.vocab}
 
     @classmethod
     def from_state_dict(cls, state_dict):
-        return cls(state_dict["vocab"], state_dict["p_mask"])
+        return cls(**state_dict)
 
     def __repr__(self):
         return f"Integerizer(<{len(self.vocab)} items>)"
