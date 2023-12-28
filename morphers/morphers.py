@@ -147,7 +147,7 @@ class RankScaler(Morpher):
     def from_data(cls, x):
         mean = x.mean()
         std = x.std()
-        quantiles = np.quantile(x, np.linspace(0, 1, cls.N_QUANTILES)).tolist()
+        quantiles = np.nanquantile(x, np.linspace(0, 1, cls.N_QUANTILES)).tolist()
 
         return cls(mean, std, quantiles)
 
