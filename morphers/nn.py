@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 
 
 # We need this horrible thing so Morphers can use it to return the right shape.
@@ -54,3 +55,25 @@ class CPCLoss(torch.nn.Module):
             ),  # n x s
             reduction="none",
         )
+
+
+# Rank Scale Layer
+# (Leave me alone, the paper doesn't name it.)
+class RankScaleTransform(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.weight = torch.nn.Parameter(torch.tensor([0.5]))
+        self.src_scale = torch.nn.Parameter(torch.ones([1]))
+        self.src_shift = torch.nn.Parameter(torch.zeros([1]))
+        self.rank_scale = torch.nn.Parameter(torch.ones([1]))
+        self.rank_shift = torch.nn.Parameter(torch.zeros([1]))
+
+    def forward(self, x):
+        # TKTK Is this the right way to clip weight?
+        # x is n x 2
+        self.weight = torch.nn.Parameter(torch.clamp(self.weight, min=0.0, max=1.0))
+        x = self.weight * ((x[:, 0] + self.src_shift) * self.src_scale) + (
+            1 - self.weight
+        ) * ((x[:, 1] + self.rank_shift) * self.rank_scale)
+        return x

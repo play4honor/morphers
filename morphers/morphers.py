@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 import numpy as np
 import torch
+import polars as pl
 
 
-from .nn import Unsqueezer, CPCLoss
+from .nn import Unsqueezer, CPCLoss, RankScaleTransform
 
 
 class Morpher(ABC):
@@ -95,6 +97,70 @@ class Normalizer(Morpher):
 
     def make_embedding(self, x, /):
         return torch.nn.Sequential(
+            Unsqueezer(dim=-1),
+            torch.nn.Linear(in_features=1, out_features=x),
+        )
+
+    def make_predictor_head(self, x, /):
+        return torch.nn.Linear(in_features=x, out_features=1)
+
+    def make_criterion(self):
+        return torch.nn.MSELoss(reduction="none")
+
+
+class RankScaler(Morpher):
+    """I don't know what to call this one. It's from here:
+    https://www.amazon.science/publications/an-inductive-bias-for-tabular-deep-learning
+    """
+
+    # Some day I'll come up with a good way to handle this.
+    N_QUANTILES = 200
+
+    def __init__(self, mean, std, quantiles):
+        self.mean = mean
+        self.std = std
+        self.quantiles = quantiles
+        self.n_quantiles = len(quantiles)
+        self.q_array = np.array(self.quantiles)
+
+    def _make_ranks(self, x: List[pl.Series]) -> pl.Series:
+        ranks = np.searchsorted(self.q_array, x[0].to_numpy())
+        return pl.Series(ranks / self.n_quantiles)
+
+    def __call__(self, x):
+        x = (x - self.mean) / self.std
+        # Ultra-defensive
+        x = x.fill_nan(self.missing_value).fill_null(self.missing_value)
+        return pl.concat_list(
+            x, pl.map_groups(x, self._make_ranks, return_dtype=pl.Float32)
+        )
+
+    @property
+    def required_dtype(self):
+        return torch.float32
+
+    @property
+    def missing_value(self):
+        return self.mean
+
+    @classmethod
+    def from_data(cls, x):
+        mean = x.mean()
+        std = x.std()
+        quantiles = np.quantile(x, np.linspace(0, 1, cls.N_QUANTILES)).tolist()
+
+        return cls(mean, std, quantiles)
+
+    @classmethod
+    def from_state_dict(cls, state_dict):
+        return cls(**state_dict)
+
+    def save_state_dict(self):
+        return {"mean": self.mean, "std": self.std, "quantiles": self.quantiles}
+
+    def make_embedding(self, x, /):
+        return torch.nn.Sequential(
+            RankScaleTransform(),
             Unsqueezer(dim=-1),
             torch.nn.Linear(in_features=1, out_features=x),
         )
