@@ -62,7 +62,7 @@ class Normalizer(Morpher):
 
     @property
     def missing_value(self):
-        return self.mean
+        return 0.0
 
     def normalize(self, x):
         x = (x - self.mean) / self.std
@@ -141,13 +141,15 @@ class RankScaler(Morpher):
 
     @property
     def missing_value(self):
-        return self.mean
+        return 0.0
 
     @classmethod
     def from_data(cls, x):
         mean = x.mean()
         std = x.std()
-        quantiles = np.nanquantile(x, np.linspace(0, 1, cls.N_QUANTILES)).tolist()
+        quantiles = np.nanquantile(
+            (x - mean) / std, np.linspace(0, 1, cls.N_QUANTILES)
+        ).tolist()
 
         return cls(mean, std, quantiles)
 
