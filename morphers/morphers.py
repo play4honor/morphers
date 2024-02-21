@@ -113,6 +113,16 @@ class Normalizer(Morpher):
         return torch.nn.MSELoss(reduction="none")
 
 
+class NullNormalizer(morphers.Normalizer):
+
+    @classmethod
+    def from_data(cls, x):
+        mean = x.drop_nulls().mean()
+        std = x.drop_nulls().std()
+
+        return cls(mean, std)
+
+
 class RankScaler(Morpher):
     """I don't know what to call this one. It's from here:
     https://www.amazon.science/publications/an-inductive-bias-for-tabular-deep-learning
@@ -180,7 +190,6 @@ class RankScaler(Morpher):
 
 
 class Integerizer(Morpher):
-    MISSING_VALUE = "<MISSING>"
 
     def __init__(self, vocab):
         self.vocab = vocab
@@ -191,7 +200,7 @@ class Integerizer(Morpher):
 
     @property
     def missing_value(self):
-        return self.MISSING_VALUE
+        return len(self.vocab)
 
     def __call__(self, x):
         return x.map_dict(self.vocab, default=len(self.vocab))
