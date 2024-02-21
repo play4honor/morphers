@@ -36,6 +36,11 @@ class Morpher(ABC):
     def required_dtype(self):
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def missing_value(self):
+        raise NotImplementedError
+
     @abstractmethod
     def save_state_dict(self):
         raise NotImplementedError
