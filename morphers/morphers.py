@@ -113,7 +113,7 @@ class Normalizer(Morpher):
         return torch.nn.MSELoss(reduction="none")
 
 
-class NullNormalizer(morphers.Normalizer):
+class NullNormalizer(Normalizer):
 
     @classmethod
     def from_data(cls, x):
