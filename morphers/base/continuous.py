@@ -69,6 +69,16 @@ class Normalizer(Morpher):
         return torch.nn.MSELoss(reduction="none")
 
 
+class NullNormalizer(Normalizer):
+
+    @classmethod
+    def from_data(cls, x):
+        mean = x.drop_nulls().mean()
+        std = x.drop_nulls().std()
+
+        return cls(mean, std)
+
+
 class RankScaler(Morpher):
     """I don't know what to call this one. It's from here:
     https://www.amazon.science/publications/an-inductive-bias-for-tabular-deep-learning
