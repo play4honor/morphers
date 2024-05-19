@@ -183,6 +183,7 @@ class Quantiler(Morpher):
         # Each bucket means exactly the quantile value, so there's some
         # quantization error.
         def quantile_bce(input, target):
+            input = torch.transpose(input, 1, -1)
             target = torch.round(target * self.n_quantiles).long()
             return torch.nn.functional.cross_entropy(input, target, reduction="none")
 
