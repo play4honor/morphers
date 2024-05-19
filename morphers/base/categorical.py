@@ -60,7 +60,7 @@ class Integerizer(Morpher):
 
     def generate(self, x, temperature=1.0, **_):
         options = choose_options(x, temperature=temperature)
-        return options / self.N_QUANTILES
+        return options
 
 
 # I didn't do this one, sorry.
