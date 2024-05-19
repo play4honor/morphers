@@ -36,6 +36,9 @@ class PolarsRankScaler(RankScaler):
 
 class PolarsQuantiler(Quantiler):
 
+    def fill_missing(self, x):
+        return x.fill_null(self.mean).fill_nan(self.mean)
+
     def __call__(self, x):
         q = pl.Series(self.quantiles[1:])
         # k means between the (k-1)th quantile and the kth quantile

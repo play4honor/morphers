@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "morphers"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Play4Honor"]
 readme = "README.md"
