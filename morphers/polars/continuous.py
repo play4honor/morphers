@@ -37,7 +37,7 @@ class PolarsRankScaler(RankScaler):
 class PolarsQuantiler(Quantiler):
 
     def fill_missing(self, x):
-        return x.fill_null(self.mean).fill_nan(self.mean)
+        return x.fill_null(0.5).fill_nan(0.5)
 
     def __call__(self, x):
         q = pl.Series(self.quantiles[1:])
