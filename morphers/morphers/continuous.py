@@ -4,44 +4,34 @@ from abc import abstractmethod
 import numpy as np
 import torch
 
-from .base import Morpher
-from .helpers import choose_options
+from ..base.base import Morpher
+from ..base.helpers import choose_options
 from ..nn import Unsqueezer, RankScaleTransform
+from ..backends.polars import PolarsNormalizerBackend
 
 
 class Normalizer(Morpher):
-    def __init__(self, mean, std):
-        if isinstance(mean, (np.ndarray, np.generic, torch.Tensor)):
-            self.mean = mean.item()
-            self.std = std.item()
 
-        else:
-            self.mean = mean
-            self.std = std
+    BACKEND_LOOKUP = {
+        "polars": PolarsNormalizerBackend,
+    }
+
+    def __init__(self, mean, std, backend="polars"):
+        self.mean = mean
+        self.std = std
+        self.backend = self.get_backend(backend)
+
+    def __call__(self, x):
+        return self.backend(x, self.mean, self.std)
 
     @property
     def required_dtype(self):
         return torch.float32
 
-    @property
-    def missing_value(self):
-        return 0.0
-
     def denormalize(self, x):
+        # TKTK: This should be a generic unmorph method
         # reverse operation
         return x * self.std + self.mean
-
-    @abstractmethod
-    def __call__(self, x):
-        raise NotImplementedError
-        # The expected operation here is (x - mean) / std
-
-    @classmethod
-    def from_data(cls, x):
-        mean = x.mean()
-        std = x.std()
-
-        return cls(mean, std)
 
     def save_state_dict(self):
         return {
@@ -50,8 +40,8 @@ class Normalizer(Morpher):
         }
 
     @classmethod
-    def from_state_dict(cls, state_dict):
-        return cls(**state_dict)
+    def from_state_dict(cls, state_dict, backend="polars"):
+        return cls(**state_dict, backend=backend)
 
     def __repr__(self):
         return f"Normalizer(mean={self.mean}, std={self.std})"

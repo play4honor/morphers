@@ -1,44 +1,42 @@
-from abc import abstractmethod
-
 import torch
 
-from .base import Morpher
-from .helpers import choose_options
+from ..base.base import Morpher
+from ..base.helpers import choose_options
 from ..nn import CPCLoss
+from ..backends.polars import PolarsIntegerizerBackend
 
 
 class Integerizer(Morpher):
 
     MISSING_VALUE = "<MISSING>"
 
-    def __init__(self, vocab):
+    BACKEND_LOOKUP = {
+        "polars": PolarsIntegerizerBackend,
+    }
+
+    def __init__(self, vocab, backend="polars"):
         self.vocab = vocab
+        self.backend = self.get_backend(backend)
 
     @property
     def required_dtype(self):
         return torch.int64
 
-    @property
-    def missing_value(self):
-        return self.MISSING_VALUE
-
-    @abstractmethod
     def __call__(self, x):
-        return x.map_dict(self.vocab, default=len(self.vocab))
+        return self.backend(x, self.vocab)
 
-    @abstractmethod
-    def from_data(cls, x):
-        raise NotImplementedError
+    def fill_missing(self, x):
+        return self.backend.fill_missing(x, self.MISSING_VALUE)
 
     def save_state_dict(self):
         return {"vocab": self.vocab}
 
     @classmethod
-    def from_state_dict(cls, state_dict):
-        return cls(**state_dict)
+    def from_state_dict(cls, state_dict, backend="polars"):
+        return cls(**state_dict, backend=backend)
 
     def __repr__(self):
-        return f"Integerizer(<{len(self.vocab)} items>)"
+        return f"Integerizer(<{len(self.vocab)} items>, backend={self.backend})"
 
     def make_embedding(self, x, /):
         return torch.nn.Embedding(len(self.vocab) + 1, x)
