@@ -1,2 +1,2 @@
 from .categorical import PolarsIntegerizerBackend
-from .continuous import PolarsNormalizerBackend
+from .continuous import PolarsNormalizerBackend, PolarsQuantilerBackend

@@ -7,7 +7,7 @@ import torch
 from ..base.base import Morpher
 from ..base.helpers import choose_options
 from ..nn import Unsqueezer, RankScaleTransform
-from ..backends.polars import PolarsNormalizerBackend
+from ..backends.polars import PolarsNormalizerBackend, PolarsQuantilerBackend
 
 
 class Normalizer(Morpher):
@@ -57,6 +57,58 @@ class Normalizer(Morpher):
 
     def make_criterion(self):
         return torch.nn.MSELoss(reduction="none")
+
+
+class Quantiler(Morpher):
+
+    BACKEND_LOOKUP = {
+        "polars": PolarsQuantilerBackend,
+    }
+
+    def __init__(self, quantiles, backend="polars"):
+        self.quantiles = quantiles
+        self.n_quantiles = len(quantiles)
+        self.backend = self.get_backend(backend)
+
+    def __call__(self, x):
+        return self.backend(x, self.quantiles)
+
+    @property
+    def required_dtype(self):
+        return torch.float32
+
+    def save_state_dict(self):
+        return {"quantiles": self.quantiles}
+
+    @classmethod
+    def from_state_dict(cls, state_dict, backend="polars"):
+        return cls(**state_dict, backend=backend)
+
+    def __repr__(self):
+        return f"Quantiler(<{self.n_quantiles} quantiles>)"
+
+    def make_embedding(self, x, /):
+        return torch.nn.Sequential(
+            Unsqueezer(dim=-1),
+            torch.nn.Linear(in_features=1, out_features=x),
+        )
+
+    def make_predictor_head(self, x, /):
+        return torch.nn.Linear(in_features=x, out_features=self.n_quantiles)
+
+    def make_criterion(self):
+        # Each bucket means exactly the quantile value, so there's some
+        # quantization error.
+        def quantile_bce(input, target):
+            input = torch.transpose(input, 1, -1)
+            target = torch.round(target * self.n_quantiles).long()
+            return torch.nn.functional.cross_entropy(input, target, reduction="none")
+
+        return quantile_bce
+
+    def generate(self, x, temperature=1.0, **_):
+        options = choose_options(x, temperature=temperature)
+        return options / self.n_quantiles
 
 
 class NullNormalizer(Normalizer):
@@ -122,63 +174,3 @@ class RankScaler(Morpher):
 
     def make_criterion(self):
         return torch.nn.MSELoss(reduction="none")
-
-
-class Quantiler(Morpher):
-
-    def __init__(self, quantiles):
-        self.quantiles = quantiles
-        self.n_quantiles = len(quantiles)
-
-    @property
-    def required_dtype(self):
-        return torch.float32
-
-    @property
-    def missing_value(self):
-        # Roughly the median
-        # This may or may not be a unique value.
-        return 0.5
-
-    @abstractmethod
-    def __call__(self, x):
-        raise NotImplementedError
-
-    @classmethod
-    def from_data(cls, x, n_quantiles):
-        q = np.linspace(0, 1, n_quantiles)
-        quantiles = np.nanquantile(x.to_numpy(), q).tolist()
-        return cls(quantiles)
-
-    def save_state_dict(self):
-        return {"quantiles": self.quantiles}
-
-    @classmethod
-    def from_state_dict(cls, state_dict):
-        return cls(**state_dict)
-
-    def __repr__(self):
-        return f"Quantiler({self.quantiles})"
-
-    def make_embedding(self, x):
-        return torch.nn.Sequential(
-            Unsqueezer(dim=-1),
-            torch.nn.Linear(in_features=1, out_features=x),
-        )
-
-    def make_predictor_head(self, x):
-        return torch.nn.Linear(in_features=x, out_features=self.n_quantiles)
-
-    def make_criterion(self):
-        # Each bucket means exactly the quantile value, so there's some
-        # quantization error.
-        def quantile_bce(input, target):
-            input = torch.transpose(input, 1, -1)
-            target = torch.round(target * self.n_quantiles).long()
-            return torch.nn.functional.cross_entropy(input, target, reduction="none")
-
-        return quantile_bce
-
-    def generate(self, x, temperature=1.0, **_):
-        options = choose_options(x, temperature=temperature)
-        return options / self.n_quantiles

@@ -2,7 +2,6 @@ from typing import List
 
 import numpy as np
 import polars as pl
-import torch
 
 from ...base.base import MorpherBackend
 
@@ -16,12 +15,31 @@ class PolarsNormalizerBackend(MorpherBackend):
     def fill_missing(self, x, missing):
         return x.fill_nan(missing).fill_null(missing)
 
-    @classmethod
-    def from_data(cls, x) -> dict:
+    @staticmethod
+    def from_data(x) -> dict:
         mean = x.mean()
         std = x.std()
 
         return {"mean": mean, "std": std}
+
+
+class PolarsQuantilerBackend(MorpherBackend):
+
+    def __call__(self, x, quantiles):
+        q = pl.Series(quantiles[1:])
+        return x.cut(q, labels=np.arange(len(quantiles)).astype("str")).cast(
+            pl.Float32
+        ) / len(quantiles)
+
+    def fill_missing(self, x, missing):
+        return x.fill_nan(missing).fill_null(missing)
+
+    @staticmethod
+    def from_data(x, n_quantiles: int) -> dict:
+        q = np.linspace(0.005, 0.995, n_quantiles)
+        quantiles = np.nanquantile(x.to_numpy(), q).tolist()
+
+        return {"quantiles": quantiles}
 
 
 # class PolarsRankScaler(RankScaler):
@@ -42,18 +60,4 @@ class PolarsNormalizerBackend(MorpherBackend):
 #             x,
 #             x.cut(q, labels=np.arange(self.n_quantiles).astype("str")).cast(pl.Float32)
 #             / self.n_quantiles,
-#         )
-
-
-# class PolarsQuantiler(Quantiler):
-
-#     def fill_missing(self, x):
-#         return x.fill_null(0.5).fill_nan(0.5)
-
-#     def __call__(self, x):
-#         q = pl.Series(self.quantiles[1:])
-#         # k means between the (k-1)th quantile and the kth quantile
-#         return (
-#             x.cut(q, labels=np.arange(self.n_quantiles).astype("str")).cast(pl.Float32)
-#             / self.n_quantiles
 #         )

@@ -10,6 +10,7 @@ BUILTIN_BACKEND_TYPE_MAP = {
 
 class Morpher(ABC):
 
+    # This will be overwritten by a specific morpher subclass.
     BACKEND_LOOKUP = {}
 
     @classmethod
@@ -43,7 +44,7 @@ class Morpher(ABC):
         raise NotImplementedError
 
     @classmethod
-    def from_data(cls, x, backend=None):
+    def from_data(cls, x, backend=None, *args, **kwargs):
         if backend is None:
             matched_any = False
             for types, backend_name in BUILTIN_BACKEND_TYPE_MAP.items():
@@ -54,7 +55,7 @@ class Morpher(ABC):
                 raise ValueError(
                     f"Provided data of class {type(x)} doesn't match any known backend."
                 )
-        init_args = backend.from_data(x)
+        init_args = backend.from_data(x, *args, **kwargs)
         # The backend here should always be an instantiated morpher backend.
         return cls(**init_args, backend=backend)
 
@@ -94,7 +95,7 @@ class MorpherBackend(ABC):
     def fill_missing(self, x, missing):
         raise NotImplementedError
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def from_data(cls, x) -> dict:
+    def from_data(x) -> dict:
         raise NotImplementedError

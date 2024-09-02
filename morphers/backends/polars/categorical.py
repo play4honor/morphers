@@ -12,7 +12,7 @@ class PolarsIntegerizerBackend(MorpherBackend):
     def fill_missing(self, x, missing_value):
         return x.fill_null(missing_value)
 
-    @classmethod
-    def from_data(cls, x):
+    @staticmethod
+    def from_data(x):
         vocab = {t: i for i, t in enumerate(x.filter(x.is_not_null()).unique())}
         return {"vocab": vocab}
