@@ -12,6 +12,8 @@ from ..backends.polars import PolarsNormalizerBackend, PolarsQuantilerBackend
 
 class Normalizer(Morpher):
 
+    MISSING_VALUE = 0.0
+
     BACKEND_LOOKUP = {
         "polars": PolarsNormalizerBackend,
     }
@@ -23,6 +25,9 @@ class Normalizer(Morpher):
 
     def __call__(self, x):
         return self.backend(x, self.mean, self.std)
+
+    def fill_missing(self, x):
+        return self.backend.fill_missing(x, self.MISSING_VALUE)
 
     @property
     def required_dtype(self):
@@ -61,6 +66,8 @@ class Normalizer(Morpher):
 
 class Quantiler(Morpher):
 
+    MISSING_VALUE = 0.5
+
     BACKEND_LOOKUP = {
         "polars": PolarsQuantilerBackend,
     }
@@ -72,6 +79,9 @@ class Quantiler(Morpher):
 
     def __call__(self, x):
         return self.backend(x, self.quantiles)
+
+    def fill_missing(self, x):
+        return self.backend.fill_missing(x, self.MISSING_VALUE)
 
     @property
     def required_dtype(self):
