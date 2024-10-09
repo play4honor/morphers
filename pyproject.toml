@@ -1,16 +1,25 @@
-[tool.poetry]
+[project]
 name = "morphers"
-version = "0.2.5"
-description = ""
-authors = ["Play4Honor"]
+version = "0.1.2"
+description = "Tools to handle data transformations for tabular-ish deep learning models."
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-torch = "^2.0"
-polars = "^0.20"
-numpy = "^1.26"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy>=1.26",
+    "polars>=0.20",
+    "torch>=2.0",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.urls]
+Homepage = "https://github.com/play4honor/morphers/tree/main"
+Issues = "https://github.com/play4honor/morphers/issues"
