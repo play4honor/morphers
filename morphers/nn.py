@@ -11,6 +11,23 @@ class Unsqueezer(torch.nn.Module):
     def forward(self, x):
         return x.unsqueeze(self.dim)
 
+# Time2Vec Module
+class Time2Vec(nn.Module):
+    def __init__(self, size: int):
+        super().__init__()
+
+        self.size = size
+
+        self.weight = nn.Parameter(torch.zeros([1, self.size]))
+        nn.init.kaiming_uniform_(self.weight, nonlinearity="relu")
+        self.bias = nn.Parameter(torch.zeros([1, self.size]))
+        nn.init.kaiming_uniform_(self.bias, nonlinearity="relu")
+
+    def forward(self, x):
+        linear_term = self.weight[:, 0] * x + self.bias[:, 0]
+        periodic_terms = torch.sin(self.weight[:, 1:] * x + self.bias[:, 1:])
+
+        return torch.cat([linear_term, periodic_terms], dim=-1)
 
 # Contrastive Predictive Coding loss for BigIntegerizer
 class CPCLoss(torch.nn.Module):

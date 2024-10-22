@@ -6,7 +6,7 @@ import torch
 
 from ..base.base import Morpher
 from ..base.helpers import choose_options
-from ..nn import Unsqueezer, RankScaleTransform
+from ..nn import Unsqueezer, RankScaleTransform, Time2Vec
 from ..backends.polars import PolarsNormalizerBackend, PolarsQuantilerBackend
 
 
@@ -184,3 +184,14 @@ class RankScaler(Morpher):
 
     def make_criterion(self):
         return torch.nn.MSELoss(reduction="none")
+
+
+class TimeNormalizer(Normalizer):
+    def make_embedding(self, x, /):
+        return torch.nn.Sequential(
+            Unsqueezer(dim=-1),
+            Time2Vec(x)
+        )
+    
+    def __repr__(self):
+        return f"TimeNormalizer(mean={self.mean}, std={self.std})"
