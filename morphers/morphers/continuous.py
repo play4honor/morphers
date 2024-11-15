@@ -6,7 +6,7 @@ import torch
 
 from ..base.base import Morpher
 from ..base.helpers import choose_options
-from ..nn import Unsqueezer, RankScaleTransform
+from ..nn import Unsqueezer, RankScaleTransform, NanFiller
 from ..backends.polars import PolarsNormalizerBackend, PolarsQuantilerBackend
 
 
@@ -119,6 +119,35 @@ class Quantiler(Morpher):
     def generate(self, x, temperature=1.0, **_):
         options = choose_options(x, temperature=temperature)
         return options / self.n_quantiles
+
+
+class MissingIndicatorQuantiler(Quantiler):
+
+    MISSING_VALUE = float("nan")
+
+    def make_predictor_head(self, x, /):
+        # + 1 for nan
+        return torch.nn.Linear(in_features=x, out_features=self.n_quantiles + 1)
+
+    def make_criterion(self):
+        # Each bucket means exactly the quantile value, so there's some
+        # quantization error.
+        # Adds a nan position to the thing
+        def quantile_bce(input, target):
+            input = torch.transpose(input, 1, -1)
+            target = torch.round(
+                torch.nan_to_num(target * self.n_quantiles, nan=self.n_quantiles)
+            ).long()
+            return torch.nn.functional.cross_entropy(input, target, reduction="none")
+
+        return quantile_bce
+
+    def make_embedding(self, x, /):
+        return torch.nn.Sequential(
+            Unsqueezer(dim=-1),
+            torch.nn.Linear(in_features=1, out_features=x),
+            NanFiller(dim=x),
+        )
 
 
 class NullNormalizer(Normalizer):

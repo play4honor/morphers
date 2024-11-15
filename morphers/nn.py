@@ -12,6 +12,19 @@ class Unsqueezer(torch.nn.Module):
         return x.unsqueeze(self.dim)
 
 
+class NanFiller(nn.Module):
+    """ "Replace missing values with elements from a learned missing embedding."""
+
+    def __init__(self, dim):
+
+        super().__init__()
+        self.register_parameter("missing_embedding", torch.zeros([dim]))
+
+    def forward(self, x):
+
+        return torch.where(x.isnan(), self.missing_embedding, x)
+
+
 # Contrastive Predictive Coding loss for BigIntegerizer
 class CPCLoss(torch.nn.Module):
     def __init__(self, embedding_layer, n_negative_samples):
