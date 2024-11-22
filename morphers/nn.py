@@ -18,7 +18,7 @@ class NanFiller(nn.Module):
     def __init__(self, dim):
 
         super().__init__()
-        self.register_parameter("missing_embedding", torch.zeros([dim]))
+        self.register_parameter("missing_embedding", nn.Parameter(torch.zeros([dim])))
 
     def forward(self, x):
 

@@ -129,6 +129,9 @@ class MissingIndicatorQuantiler(Quantiler):
         # + 1 for nan
         return torch.nn.Linear(in_features=x, out_features=self.n_quantiles + 1)
 
+    def fill_missing(self, x):
+        return x.fill_null(float("nan"))
+
     def make_criterion(self):
         # Each bucket means exactly the quantile value, so there's some
         # quantization error.

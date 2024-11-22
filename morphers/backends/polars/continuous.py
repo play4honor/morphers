@@ -27,9 +27,10 @@ class PolarsQuantilerBackend(MorpherBackend):
 
     def __call__(self, x, quantiles):
         q = pl.Series(quantiles[1:])
-        return x.cut(q, labels=np.arange(len(quantiles)).astype("str")).cast(
-            pl.Float32
-        ) / len(quantiles)
+        return (
+            x.cut(q, labels=np.arange(len(quantiles)).astype("str")).cast(pl.Float32)
+            / len(quantiles)
+        ).fill_null(float("nan"))
 
     def fill_missing(self, x, missing):
         return x.fill_nan(missing).fill_null(missing)
