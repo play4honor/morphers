@@ -63,6 +63,9 @@ class Normalizer(Morpher):
     def make_criterion(self):
         return torch.nn.MSELoss(reduction="none")
 
+    def generate(self, x, **_):
+        return self.denormalize(x)
+
 
 class Quantiler(Morpher):
 
@@ -151,16 +154,6 @@ class MissingIndicatorQuantiler(Quantiler):
             torch.nn.Linear(in_features=1, out_features=x),
             NanFiller(dim=x),
         )
-
-
-class NullNormalizer(Normalizer):
-
-    @classmethod
-    def from_data(cls, x):
-        mean = x.drop_nulls().mean()
-        std = x.drop_nulls().std()
-
-        return cls(mean, std)
 
 
 class RankScaler(Morpher):

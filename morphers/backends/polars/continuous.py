@@ -17,8 +17,8 @@ class PolarsNormalizerBackend(MorpherBackend):
 
     @staticmethod
     def from_data(x) -> dict:
-        mean = x.mean()
-        std = x.std()
+        mean = x.drop_nulls().mean()
+        std = x.drop_nulls().std()
 
         return {"mean": mean, "std": std}
 
